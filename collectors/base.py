@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 from dataclasses import dataclass, asdict
 from datetime import date, datetime
 from abc import ABC, abstractmethod
@@ -25,6 +28,18 @@ class CostRecord:
         d["date"] = self.date.isoformat()
         d["collected_at"] = self.collected_at.isoformat()
         return d
+
+
+def get_bq_client() -> bigquery.Client:
+    """Create BigQuery client, supporting GOOGLE_CREDENTIALS_JSON env var for CI."""
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        # Write credentials to temp file and point ADC to it
+        tmpfile = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        tmpfile.write(creds_json)
+        tmpfile.close()
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmpfile.name
+    return bigquery.Client(project="dataseekers-core")
 
 
 class CostCollector(ABC):
@@ -56,7 +71,7 @@ class CostCollector(ABC):
         if not records:
             return
 
-        client = bq_client or bigquery.Client()
+        client = bq_client or get_bq_client()
         start = min(r.date for r in records)
         end = max(r.date for r in records)
 

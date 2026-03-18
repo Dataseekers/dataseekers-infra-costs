@@ -5,8 +5,7 @@ import argparse
 import sys
 from datetime import date, datetime
 
-from google.cloud import bigquery
-
+from collectors.base import get_bq_client
 from collectors.ovh import OVHCollector
 from collectors.oci import OCICollector
 from collectors.brightdata import BrightDataCollector
@@ -53,7 +52,7 @@ def get_month_range(month_str: str) -> tuple[date, date]:
 def cmd_collect(args):
     start, end = get_month_range(args.month)
     providers = args.providers.split(",") if args.providers else list(COLLECTORS.keys())
-    bq_client = bigquery.Client() if not args.dry_run else None
+    bq_client = get_bq_client() if not args.dry_run else None
 
     print(f"Collecting costs: {start} to {end}")
     print(f"Providers: {', '.join(providers)}")
@@ -96,7 +95,7 @@ def cmd_collect(args):
 
 def cmd_report(args):
     start, end = get_month_range(args.month)
-    client = bigquery.Client()
+    client = get_bq_client()
 
     month_label = start.strftime("%B %Y")
     print(f"\nCosts {month_label}")
@@ -136,7 +135,7 @@ def cmd_report(args):
 
 def cmd_validate(args):
     start, end = get_month_range(args.month)
-    client = bigquery.Client()
+    client = get_bq_client()
 
     print(f"Validating costs: {start} to {end}")
 

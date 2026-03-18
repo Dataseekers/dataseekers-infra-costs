@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from google.cloud import bigquery
 
-from .base import CostCollector, CostRecord
+from .base import CostCollector, CostRecord, get_bq_client
 
 
 class GCPCollector(CostCollector):
@@ -20,7 +20,7 @@ class GCPCollector(CostCollector):
         now = datetime.utcnow()
         records = []
 
-        client = bigquery.Client()
+        client = get_bq_client()
 
         query = f"""
         SELECT

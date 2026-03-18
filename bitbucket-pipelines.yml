@@ -1,0 +1,56 @@
+image: python:3.12-slim
+
+definitions:
+  steps:
+    - step: &collect-daily
+        name: Collect daily (GCP + OCI)
+        caches:
+          - pip
+        script:
+          - pip install -r requirements.txt
+          - python main.py collect --month current --providers gcp,oci --verbose
+
+    - step: &collect-monthly
+        name: Collect monthly (OVH + BrightData + Bitbucket)
+        caches:
+          - pip
+        script:
+          - pip install -r requirements.txt
+          - python main.py collect --month previous --providers ovh,brightdata,bitbucket --verbose
+          - python main.py validate --month previous
+          - python main.py report --month previous
+
+  schedules:
+    - name: daily-cost-collection
+      cron: "0 8 * * *"
+      branches:
+        include:
+          - main
+
+    - name: monthly-cost-collection
+      cron: "0 8 3 * *"
+      branches:
+        include:
+          - main
+
+pipelines:
+  custom:
+    collect-daily:
+      - step: *collect-daily
+
+    collect-monthly:
+      - step: *collect-monthly
+
+    collect-all:
+      - step: *collect-daily
+      - step: *collect-monthly
+
+  branches:
+    main:
+      - step:
+          name: Validate
+          caches:
+            - pip
+          script:
+            - pip install -r requirements.txt
+            - python main.py collect --month current --providers gcp --dry-run
