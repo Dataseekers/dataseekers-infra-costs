@@ -14,7 +14,7 @@ gcp:
     "dataseekers-e2543": "platform"
     "jenkins-auth-272115": "platform"
     "ai-mapping-seeker": "platform"
-    "price-seeker-v2": "platform"
+    "price-seeker-v2": "psv3"
     "looker-465318": "platform"
     "looker-api-client": "platform"
     "wiki-seeker-ds": "platform"

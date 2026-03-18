@@ -69,8 +69,8 @@ def get_month_data(month: str) -> dict:
     """)
 
     daily = query_bq(f"""
-        SELECT date, SUM(amount) as total
-        FROM `dataseekers-core.costs.raw_costs`
+        SELECT date, SUM(total) as total
+        FROM `dataseekers-core.costs.daily_prorated`
         WHERE date >= '{start}' AND date < '{end}'
         GROUP BY 1 ORDER BY 1
     """)
