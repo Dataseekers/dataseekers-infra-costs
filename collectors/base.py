@@ -1,0 +1,92 @@
+from dataclasses import dataclass, asdict
+from datetime import date, datetime
+from abc import ABC, abstractmethod
+
+import yaml
+from google.cloud import bigquery
+
+
+@dataclass
+class CostRecord:
+    date: date
+    provider: str
+    business_unit: str
+    category: str
+    description: str
+    amount: float
+    original_currency: str
+    original_amount: float
+    exchange_rate: float
+    source: str
+    collected_at: datetime
+
+    def to_dict(self):
+        d = asdict(self)
+        d["date"] = self.date.isoformat()
+        d["collected_at"] = self.collected_at.isoformat()
+        return d
+
+
+class CostCollector(ABC):
+    provider: str
+    table_id: str = "dataseekers-core.costs.raw_costs"
+
+    def __init__(self, bu_mapping_path: str = "config/bu-mapping.yaml"):
+        with open(bu_mapping_path) as f:
+            self._bu_mapping = yaml.safe_load(f)
+
+    @abstractmethod
+    def collect(self, start_date: date, end_date: date) -> list[CostRecord]:
+        raise NotImplementedError
+
+    def get_bu(self, key: str) -> str:
+        provider_mapping = self._bu_mapping.get(self.provider, {})
+        if isinstance(provider_mapping, str):
+            return provider_mapping
+
+        # Check in sub-mappings (projects, compartments, zones, etc.)
+        for section in ("projects", "compartments", "zones"):
+            mapping = provider_mapping.get(section, {})
+            if key in mapping:
+                return mapping[key]
+
+        return provider_mapping.get("default", "platform")
+
+    def load(self, records: list[CostRecord], bq_client: bigquery.Client | None = None):
+        if not records:
+            return
+
+        client = bq_client or bigquery.Client()
+        start = min(r.date for r in records)
+        end = max(r.date for r in records)
+
+        # Delete existing records for this provider + date range (idempotent)
+        client.query(
+            f"""
+            DELETE FROM `{self.table_id}`
+            WHERE date BETWEEN @start AND @end AND provider = @provider
+            """,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("start", "DATE", start),
+                    bigquery.ScalarQueryParameter("end", "DATE", end),
+                    bigquery.ScalarQueryParameter("provider", "STRING", self.provider),
+                ]
+            ),
+        ).result()
+
+        # Insert new records
+        errors = client.insert_rows_json(
+            self.table_id, [r.to_dict() for r in records]
+        )
+        if errors:
+            raise RuntimeError(f"BigQuery insert errors: {errors}")
+
+    def validate(self, records: list[CostRecord]) -> list[str]:
+        warnings = []
+        for r in records:
+            if r.amount < 0:
+                warnings.append(f"Negative cost: {r.description} = {r.amount}")
+        if not records:
+            warnings.append(f"No records collected for {self.provider}")
+        return warnings

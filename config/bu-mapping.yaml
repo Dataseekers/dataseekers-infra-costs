@@ -1,0 +1,95 @@
+gcp:
+  projects:
+    "tickets-seeker": "tickets"
+    "tickets-seeker-proxy": "tickets"
+    "price-seeker-hotels": "hotels"
+    "price-seeker-rentacar": "rentacar"
+    "price-seeker-ferries": "ferries"
+    "price-seeker-flights": "flights"
+    "price-seeker-packages": "packages"
+    "retail-seeker": "retail"
+    "puig-294016": "puig"
+    "turobserver": "turobserver"
+    "dataseekers-core": "platform"
+    "dataseekers-e2543": "platform"
+    "jenkins-auth-272115": "platform"
+    "ai-mapping-seeker": "platform"
+    "price-seeker-v2": "platform"
+    "looker-465318": "platform"
+    "looker-api-client": "platform"
+    "wiki-seeker-ds": "platform"
+  default: "platform"
+
+ovh:
+  projects:
+    "e046bdd7877442a981ddd35a2d010c11": "tickets"
+    "7cd0c51d3ecd46e0a2e9f0b862c45add": "platform"
+    "a1676b228191442aa3838b8e18e207c7": "platform"
+
+oci:
+  compartments:
+    "heatweave_poc": "retail"
+    "dataseekers": "platform"
+    "Hotels": "hotels"
+
+brightdata:
+  zones:
+    # retail
+    retail: "retail"
+    datacenter_retail: "retail"
+    dc_eci_es: "retail"
+    dc_druni_es: "retail"
+    dc_macys_us: "retail"
+    akamai_elcorteingles_pt: "retail"
+    akamai_elcorteingles_es: "retail"
+    akamai_ltc_es: "retail"
+    mattel_whitelist: "retail"
+    # tickets
+    tickets: "tickets"
+    tickets_ticketmaster: "tickets"
+    tickets_es: "tickets"
+    tickets_manual_browser: "tickets"
+    tickets_datacenter: "tickets"
+    tickets_viagogo: "tickets"
+    tickets_mobile: "tickets"
+    tickets_isp: "tickets"
+    # hotels
+    hotels: "hotels"
+    hotels_datacenter: "hotels"
+    hotels_test: "hotels"
+    booking_hotels_es: "hotels"
+    booking_hotels_us: "hotels"
+    booking_hotels_mx: "hotels"
+    booking_hotels_gb: "hotels"
+    booking_hotels_couk: "hotels"
+    trivago_hotels: "hotels"
+    smyrooms: "hotels"
+    logitravel_es: "hotels"
+    expedia_us_packages: "hotels"
+    expedia_hotels: "hotels"
+    lastminute_packages_gb: "hotels"
+    lastminute_packages_es: "hotels"
+    jet2: "hotels"
+    onthebeach: "hotels"
+    web_unlocker_hotels: "hotels"
+    # rentacar
+    rentacar: "rentacar"
+    rentacar_datacenter: "rentacar"
+    francecars: "rentacar"
+    budget: "rentacar"
+    static_autoeurope_us: "rentacar"
+    static_autoeurope_de: "rentacar"
+    static_autoeurope_es: "rentacar"
+    browserapi_avis: "rentacar"
+    centraldereservas_datacenter: "rentacar"
+    web_unlocker_rentacar: "rentacar"
+    # puig
+    puig: "puig"
+    datacenter_puig: "puig"
+    # ferries
+    ferries: "ferries"
+    datacenter_ferries: "ferries"
+  default: "platform"
+
+bitbucket:
+  default: "platform"
