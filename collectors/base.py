@@ -31,14 +31,34 @@ class CostRecord:
 
 
 def get_bq_client() -> bigquery.Client:
-    """Create BigQuery client, supporting GOOGLE_CREDENTIALS_JSON env var for CI."""
+    """Create BigQuery client.
+
+    Supports 3 auth methods (in priority order):
+    1. Streamlit secrets (gcp_service_account in .streamlit/secrets.toml)
+    2. GOOGLE_CREDENTIALS_JSON env var (for CI pipelines)
+    3. Application Default Credentials (local dev with gcloud auth)
+    """
+    # 1. Streamlit secrets
+    try:
+        import streamlit as st
+        if "gcp_service_account" in st.secrets:
+            from google.oauth2 import service_account
+            creds = service_account.Credentials.from_service_account_info(
+                dict(st.secrets["gcp_service_account"])
+            )
+            return bigquery.Client(project="dataseekers-core", credentials=creds)
+    except Exception:
+        pass
+
+    # 2. CI env var
     creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     if creds_json:
-        # Write credentials to temp file and point ADC to it
         tmpfile = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
         tmpfile.write(creds_json)
         tmpfile.close()
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmpfile.name
+
+    # 3. ADC fallback
     return bigquery.Client(project="dataseekers-core")
 
 
