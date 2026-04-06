@@ -110,12 +110,17 @@ class CostCollector(ABC):
             ),
         ).result()
 
-        # Insert new records
-        errors = client.insert_rows_json(
-            self.table_id, [r.to_dict() for r in records]
+        # Insert new records using load API (not streaming) to avoid buffer conflicts
+        job_config = bigquery.LoadJobConfig(
+            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
         )
-        if errors:
-            raise RuntimeError(f"BigQuery insert errors: {errors}")
+        job = client.load_table_from_json(
+            [r.to_dict() for r in records], self.table_id, job_config=job_config
+        )
+        job.result()
+        if job.errors:
+            raise RuntimeError(f"BigQuery load errors: {job.errors}")
 
     def validate(self, records: list[CostRecord]) -> list[str]:
         warnings = []
