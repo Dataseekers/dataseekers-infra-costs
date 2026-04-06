@@ -143,7 +143,7 @@ daily_df = data["daily"]
 days = len(daily_df) if len(daily_df) > 0 else 1
 cost_per_day = total / days
 
-col0.metric("Cost / Day", f"€{cost_per_day:,.0f}", f"{days} days", delta_color="off")
+col0.metric("Cost / Day", f"€{cost_per_day:,.0f}", help=f"Average over {days} days with data")
 col1.metric("Total", f"€{total:,.0f}", f"{change:+.1f}%" if prev > 0 else "—")
 col2.metric("Providers", f"{len(data['by_provider'])}")
 col3.metric("Business Units", f"{len(data['by_bu'])}")
