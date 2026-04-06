@@ -133,12 +133,17 @@ selected_month = st.selectbox("Month", months, index=0)
 data = get_month_data(selected_month)
 
 # ── KPI cards ──
-col1, col2, col3, col4 = st.columns(4)
+col0, col1, col2, col3, col4 = st.columns(5)
 
 total = data["total"]
 prev = data["prev_total"]
 change = ((total - prev) / prev * 100) if prev > 0 else 0
 
+daily_df = data["daily"]
+days = len(daily_df) if len(daily_df) > 0 else 1
+cost_per_day = total / days
+
+col0.metric("Cost / Day", f"€{cost_per_day:,.0f}", f"{days} days")
 col1.metric("Total", f"€{total:,.0f}", f"{change:+.1f}%" if prev > 0 else "—")
 col2.metric("Providers", f"{len(data['by_provider'])}")
 col3.metric("Business Units", f"{len(data['by_bu'])}")
