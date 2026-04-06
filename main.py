@@ -58,6 +58,7 @@ def cmd_collect(args):
     print(f"Providers: {', '.join(providers)}")
     print()
 
+    failures = 0
     for provider_name in providers:
         if provider_name not in COLLECTORS:
             print(f"  SKIP {provider_name}: unknown provider")
@@ -89,8 +90,11 @@ def cmd_collect(args):
             if args.verbose:
                 import traceback
                 traceback.print_exc()
+            failures += 1
 
     print("\nDone.")
+    if failures:
+        sys.exit(1)
 
 
 def cmd_report(args):
@@ -141,7 +145,7 @@ def cmd_validate(args):
 
     # Check month-over-month changes
     rows = client.query(f"""
-        WITH current AS (
+        WITH `current` AS (
             SELECT provider, SUM(amount) as total
             FROM `dataseekers-core.costs.raw_costs`
             WHERE date >= '{start}' AND date < '{end}'
@@ -159,7 +163,7 @@ def cmd_validate(args):
             COALESCE(c.total, 0) as current_total,
             COALESCE(p.total, 0) as prev_total,
             SAFE_DIVIDE(COALESCE(c.total, 0) - COALESCE(p.total, 0), p.total) * 100 as change_pct
-        FROM current c
+        FROM `current` c
         FULL OUTER JOIN previous p ON c.provider = p.provider
         ORDER BY ABS(SAFE_DIVIDE(COALESCE(c.total, 0) - COALESCE(p.total, 0), p.total)) DESC
     """).result()
@@ -206,7 +210,9 @@ def main():
     elif args.command == "report":
         cmd_report(args)
     elif args.command == "validate":
-        cmd_validate(args)
+        issues = cmd_validate(args)
+        if issues:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
