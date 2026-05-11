@@ -18,7 +18,22 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python main.py collect --month current --providers gcp,oci --verbose
+      - name: Collect current month
+        run: python main.py collect --month current --providers gcp,oci --verbose
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+
+      # Re-collect previous month to capture late-arriving GCP billing records.
+      # GCP billing export can lag 24-48h, so the last day of each month
+      # under-reports unless we re-run after data has settled. Idempotent
+      # (DELETE+INSERT) so safe to run daily.
+      - name: Re-collect previous month (catch late billing records)
+        run: python main.py collect --month previous --providers gcp,oci --verbose
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
