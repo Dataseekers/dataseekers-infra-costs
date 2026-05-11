@@ -128,12 +128,6 @@ def get_trend_by_bu() -> pd.DataFrame:
     """)
 
 
-# ── Sidebar ──
-with st.sidebar:
-    if st.button("Clear cache", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-
 # ── Header ──
 st.title("Dataseekers Infrastructure Costs")
 
