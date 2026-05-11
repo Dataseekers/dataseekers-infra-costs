@@ -101,13 +101,20 @@ def get_month_data(month: str) -> dict:
 
 
 def get_monthly_trend() -> pd.DataFrame:
-    return query_bq("""
+    df = query_bq("""
         SELECT
             FORMAT_DATE('%Y-%m', date) as month,
             SUM(amount) as total
         FROM `dataseekers-core.costs.raw_costs`
         GROUP BY 1 ORDER BY 1
     """)
+    # Mark current month as incomplete
+    current_month = date.today().strftime("%Y-%m")
+    if len(df) > 0:
+        df["month"] = df["month"].apply(
+            lambda m: f"{m} *" if m == current_month else m
+        )
+    return df
 
 
 def get_trend_by_bu() -> pd.DataFrame:
@@ -204,12 +211,19 @@ with col_right:
     st.subheader("Monthly Trend")
     trend = get_monthly_trend()
     if len(trend) > 0:
-        fig = px.line(trend, x="month", y="total", markers=True)
+        fig = px.bar(
+            trend,
+            x="month",
+            y="total",
+            text=trend["total"].apply(lambda x: f"€{x:,.0f}"),
+        )
         fig.update_layout(
             xaxis_title="",
             yaxis_title="€",
+            xaxis_type="category",
             margin=dict(t=20, b=20),
         )
+        fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
 
 # ── Row 3: BU x Provider heatmap ──
