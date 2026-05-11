@@ -71,6 +71,11 @@ main.py            # CLI entrypoint: collect, report, validate
 | Bright Data | `BRIGHTDATA_API_TOKEN` |
 | Bitbucket | `BITBUCKET_USERNAME`, `BITBUCKET_API_TOKEN`, `BITBUCKET_WORKSPACE`, `BITBUCKET_SUBSCRIPTION_USD` |
 
+## Related docs (`dataseekers-infra-docs`)
+
+- [Monthly cost report runbook](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/runbooks/cost-report-monthly.md) — how to prepare the monthly email to management.
+- [GCP billing export late records](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/gcp-billing-export-late-records.md) — why the daily workflow re-collects `--month previous`.
+
 ## Testing
 
 Skip tests — no test suite yet.
