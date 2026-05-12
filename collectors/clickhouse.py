@@ -12,10 +12,8 @@ from .currency import convert_to_eur
 MAX_WINDOW_DAYS = 30
 
 
-# Empirically derived from a SCALE-tier invoice cross-check:
-# $9,555.12 invoice (Mar 18–Apr 18) vs collector totals for the same exact
-# period gives 0.9689 USD per CHC (the first 0.98 guess was 1.1% high).
-# Override with env var if the pricing tier changes.
+# Fallback when bu-mapping.yaml has no rates table and no env var override.
+# Latest known SCALE-tier rate, validated against the Mar 18 – Apr 18 invoice.
 DEFAULT_CHC_USD_RATE = 0.9689
 
 
@@ -55,10 +53,33 @@ class ClickHouseCollector(CostCollector):
         self.key_id = os.environ["CLICKHOUSE_CLOUD_API_KEY_ID"]
         self.key_secret = os.environ["CLICKHOUSE_CLOUD_API_KEY_SECRET"]
         self.org_id = os.environ["CLICKHOUSE_CLOUD_ORG_ID"]
-        self.chc_usd_rate = float(
-            os.environ.get("CLICKHOUSE_CLOUD_CHC_USD_RATE", DEFAULT_CHC_USD_RATE)
-        )
         self.base_url = "https://api.clickhouse.cloud/v1"
+
+        # Env var override is a single rate applied to every record — useful
+        # for testing or one-off backfills. Otherwise the per-cycle table in
+        # bu-mapping.yaml is consulted; final fallback is DEFAULT_CHC_USD_RATE.
+        env_override = os.environ.get("CLICKHOUSE_CLOUD_CHC_USD_RATE")
+        self._rate_override = float(env_override) if env_override else None
+        self._rate_table = self._load_rate_table()
+
+    def _load_rate_table(self) -> list[tuple[date | None, date | None, float]]:
+        raw = (self._bu_mapping.get(self.provider) or {}).get("chc_usd_rates") or []
+        table: list[tuple[date | None, date | None, float]] = []
+        for entry in raw:
+            from_d = (
+                date.fromisoformat(entry["from"]) if entry.get("from") else None
+            )
+            to_d = date.fromisoformat(entry["to"]) if entry.get("to") else None
+            table.append((from_d, to_d, float(entry["rate"])))
+        return table
+
+    def _rate_for(self, day: date) -> float:
+        if self._rate_override is not None:
+            return self._rate_override
+        for from_d, to_d, rate in self._rate_table:
+            if (from_d is None or day >= from_d) and (to_d is None or day <= to_d):
+                return rate
+        return DEFAULT_CHC_USD_RATE
 
     def _request(self, path: str, params: dict | None = None) -> dict:
         resp = requests.get(
@@ -112,7 +133,7 @@ class ClickHouseCollector(CostCollector):
                 if not chc_amount or chc_amount <= 0:
                     continue
 
-                usd_amount = float(chc_amount) * self.chc_usd_rate
+                usd_amount = float(chc_amount) * self._rate_for(usage_date)
                 eur_amount, rate = convert_to_eur(usd_amount, "USD", usage_date)
 
                 records.append(

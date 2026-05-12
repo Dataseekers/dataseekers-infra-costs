@@ -100,3 +100,16 @@ clickhouse:
   # services map below ONLY for overrides where the name-based rule is wrong.
   services: {}
   default: "platform"
+
+  # CHC → USD conversion rates, derived from invoice cross-checks per cycle
+  # (ClickHouse Cloud bills 18-to-18). Each entry's `rate` applies to
+  # records whose `date` falls in [from, to] inclusive. Use null for
+  # open-ended boundaries. Order does not matter; first match wins.
+  # Refresh when a new invoice lands; the implied rate is:
+  #   rate = invoice_usd / sum(chc) over the same date range
+  chc_usd_rates:
+    - {from: null,         to: "2026-01-17", rate: 0.9679}  # extrapolated (Dec 2025 invoice not yet cross-checked)
+    - {from: "2026-01-18", to: "2026-02-17", rate: 0.9679}  # invoice $9,167.94
+    - {from: "2026-02-18", to: "2026-03-17", rate: 0.9662}  # invoice $7,824.61
+    - {from: "2026-03-18", to: "2026-04-17", rate: 0.9689}  # invoice $9,555.14
+    - {from: "2026-04-18", to: null,         rate: 0.9689}  # carry forward latest known rate
