@@ -12,6 +12,40 @@ from .currency import convert_to_eur
 MAX_WINDOW_DAYS = 30
 
 
+# Empirically derived from a SCALE-tier invoice:
+# $9,555.14 invoice (Mar 18–Apr 18) ÷ 9,726.68 CHC (API total Apr 1–30)
+# ≈ 0.9824 USD per CHC. Override with env var if the pricing tier changes.
+DEFAULT_CHC_USD_RATE = 0.98
+
+
+# Substring rules over entityName for BU inference. Keys must be unique enough
+# not to clash with each other for the BUs we care about.
+_NAME_BU_RULES = [
+    ("rentacar", "rentacar"),
+    ("hotels", "hotels"),
+    ("puig", "puig"),
+    ("retail", "retail"),
+    ("tickets", "tickets"),
+    ("ferries", "ferries"),
+    ("flights", "flights"),
+    ("turobserver", "turobserver"),
+    ("paraty", "platform"),  # legacy company-wide warehouse
+]
+
+
+def _category_for_metric(metric_name: str) -> str:
+    """Map a CHC metric name (e.g. computeCHC, publicDataTransferCHC) to one
+    of the normalized categories used across providers."""
+    n = metric_name.lower()
+    if "compute" in n:
+        return "compute"
+    if "storage" in n or "backup" in n:
+        return "storage"
+    if "datatransfer" in n:
+        return "network"
+    return "other"
+
+
 class ClickHouseCollector(CostCollector):
     provider = "clickhouse"
 
@@ -20,6 +54,9 @@ class ClickHouseCollector(CostCollector):
         self.key_id = os.environ["CLICKHOUSE_CLOUD_API_KEY_ID"]
         self.key_secret = os.environ["CLICKHOUSE_CLOUD_API_KEY_SECRET"]
         self.org_id = os.environ["CLICKHOUSE_CLOUD_ORG_ID"]
+        self.chc_usd_rate = float(
+            os.environ.get("CLICKHOUSE_CLOUD_CHC_USD_RATE", DEFAULT_CHC_USD_RATE)
+        )
         self.base_url = "https://api.clickhouse.cloud/v1"
 
     def _request(self, path: str, params: dict | None = None) -> dict:
@@ -35,22 +72,18 @@ class ClickHouseCollector(CostCollector):
     def collect(self, start_date: date, end_date: date) -> list[CostRecord]:
         now = datetime.utcnow()
         records: list[CostRecord] = []
-
-        # The API accepts up to 30-day windows. Chunk if caller requested more
-        # (e.g. a multi-month backfill).
         cursor = start_date
         while cursor < end_date:
             window_end = min(cursor + timedelta(days=MAX_WINDOW_DAYS), end_date)
             records.extend(self._collect_window(cursor, window_end, now))
             cursor = window_end
-
         return records
 
     def _collect_window(
         self, start: date, end: date, collected_at: datetime
     ) -> list[CostRecord]:
-        # API uses inclusive to_date, so subtract 1 day from our half-open
-        # range. Avoid sending a to_date before from_date.
+        # API uses inclusive to_date; subtract 1 day from our half-open range
+        # and skip degenerate windows.
         to_date = end - timedelta(days=1)
         if to_date < start:
             return []
@@ -60,84 +93,62 @@ class ClickHouseCollector(CostCollector):
             params={"from_date": start.isoformat(), "to_date": to_date.isoformat()},
         )
 
-        # Defensive parsing: the response is documented as "grand total + list
-        # of daily per-entity records" but the exact schema is not in the
-        # public swagger. Probe for common shapes.
-        result = payload.get("result", payload)
-        currency = (result.get("currency") or "USD").upper()
-        rows = (
-            result.get("costs")
-            or result.get("dailyCosts")
-            or result.get("records")
-            or []
-        )
-        if not rows:
-            return []
-
+        rows = (payload.get("result") or {}).get("costs") or []
         records: list[CostRecord] = []
+
         for row in rows:
-            entity_id = (
-                row.get("entityId")
-                or row.get("serviceId")
-                or row.get("entity")
-                or "unknown"
-            )
-            entity_name = (
-                row.get("entityName")
-                or row.get("serviceName")
-                or row.get("name")
-                or entity_id
-            )
-            amount_native = float(
-                row.get("amount")
-                or row.get("cost")
-                or row.get("total")
-                or 0
-            )
-            if amount_native <= 0:
+            entity_id = row.get("entityId") or "unknown"
+            entity_name = row.get("entityName") or entity_id
+            try:
+                usage_date = date.fromisoformat(row["date"])
+            except (KeyError, ValueError):
                 continue
 
-            row_date = row.get("date") or row.get("usageDate") or row.get("period")
-            usage_date = (
-                date.fromisoformat(row_date) if isinstance(row_date, str) else start
-            )
+            bu = self._resolve_bu(entity_id, entity_name)
+            metrics = row.get("metrics") or {}
 
-            cost_type = (
-                row.get("costType")
-                or row.get("metric")
-                or row.get("category")
-                or "compute"
-            )
+            for metric_name, chc_amount in metrics.items():
+                if not chc_amount or chc_amount <= 0:
+                    continue
 
-            bu = self.get_bu(entity_id)
-            if bu == self._default_bu():
-                # Fallback to entity name in case mapping is keyed by name not id
-                bu_by_name = self.get_bu(entity_name)
-                if bu_by_name != self._default_bu():
-                    bu = bu_by_name
+                usd_amount = float(chc_amount) * self.chc_usd_rate
+                eur_amount, rate = convert_to_eur(usd_amount, "USD", usage_date)
 
-            eur_amount, rate = convert_to_eur(amount_native, currency, usage_date)
-
-            records.append(
-                CostRecord(
-                    date=usage_date,
-                    provider=self.provider,
-                    business_unit=bu,
-                    category="database",
-                    description=f"{cost_type}: {entity_name}",
-                    amount=eur_amount,
-                    original_currency=currency,
-                    original_amount=amount_native,
-                    exchange_rate=rate,
-                    source="api",
-                    collected_at=collected_at,
+                records.append(
+                    CostRecord(
+                        date=usage_date,
+                        provider=self.provider,
+                        business_unit=bu,
+                        category=_category_for_metric(metric_name),
+                        description=f"{metric_name}: {entity_name}",
+                        amount=eur_amount,
+                        original_currency="USD",
+                        original_amount=usd_amount,
+                        exchange_rate=rate,
+                        source="api",
+                        collected_at=collected_at,
+                    )
                 )
-            )
 
         return records
 
+    def _resolve_bu(self, entity_id: str, entity_name: str) -> str:
+        # 1) Explicit override in bu-mapping.yaml (services:)
+        explicit = self.get_bu(entity_id)
+        if explicit != self._default_bu():
+            return explicit
+
+        # 2) Infer from entityName substring
+        lowered = (entity_name or "").lower()
+        for keyword, mapped in _NAME_BU_RULES:
+            if keyword in lowered:
+                return mapped
+
+        # 3) Fallback
+        return self._default_bu()
+
     def _default_bu(self) -> str:
-        provider_mapping = self._bu_mapping.get(self.provider, {})
-        if isinstance(provider_mapping, str):
-            return provider_mapping
-        return provider_mapping.get("default", "platform")
+        mapping = self._bu_mapping.get(self.provider, {})
+        if isinstance(mapping, str):
+            return mapping
+        return mapping.get("default", "platform")

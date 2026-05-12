@@ -95,8 +95,8 @@ bitbucket:
   default: "platform"
 
 clickhouse:
-  # Map ClickHouse Cloud service ids (or names) to BU. Fill in after the
-  # first successful collect: descriptions in raw_costs will show the
-  # entity id/name returned by the API.
+  # Collector infers BU from the entityName substring (rentacar/hotels/puig/
+  # retail/tickets/ferries/flights/turobserver/paraty→platform). Use the
+  # services map below ONLY for overrides where the name-based rule is wrong.
   services: {}
-  default: "hotels"   # only hotels uses ClickHouse Cloud today
+  default: "platform"
