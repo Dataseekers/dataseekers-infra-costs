@@ -70,7 +70,7 @@ main.py            # CLI entrypoint: collect, report, validate
 | OCI | `OCI_TENANCY`, `OCI_USER`, `OCI_FINGERPRINT`, `OCI_KEY_FILE` (or `OCI_KEY_CONTENT`), `OCI_REGION` |
 | Bright Data | `BRIGHTDATA_API_TOKEN` |
 | Bitbucket | `BITBUCKET_USERNAME`, `BITBUCKET_API_TOKEN`, `BITBUCKET_WORKSPACE`, `BITBUCKET_SUBSCRIPTION_USD` |
-| ClickHouse Cloud | `CLICKHOUSE_CLOUD_API_KEY_ID`, `CLICKHOUSE_CLOUD_API_KEY_SECRET`, `CLICKHOUSE_CLOUD_ORG_ID`, `CLICKHOUSE_CLOUD_CHC_USD_RATE` (optional, default 0.98 USD/CHC for SCALE tier) |
+| ClickHouse Cloud | `CLICKHOUSE_CLOUD_API_KEY_ID`, `CLICKHOUSE_CLOUD_API_KEY_SECRET`, `CLICKHOUSE_CLOUD_ORG_ID`, `CLICKHOUSE_CLOUD_CHC_USD_RATE` (optional, default 0.9689 USD/CHC for SCALE tier, derived from a Mar 18–Apr 18 invoice cross-check) |
 
 ## Related docs (`dataseekers-infra-docs`)
 

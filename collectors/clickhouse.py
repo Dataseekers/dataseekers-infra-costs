@@ -12,10 +12,11 @@ from .currency import convert_to_eur
 MAX_WINDOW_DAYS = 30
 
 
-# Empirically derived from a SCALE-tier invoice:
-# $9,555.14 invoice (Mar 18–Apr 18) ÷ 9,726.68 CHC (API total Apr 1–30)
-# ≈ 0.9824 USD per CHC. Override with env var if the pricing tier changes.
-DEFAULT_CHC_USD_RATE = 0.98
+# Empirically derived from a SCALE-tier invoice cross-check:
+# $9,555.12 invoice (Mar 18–Apr 18) vs collector totals for the same exact
+# period gives 0.9689 USD per CHC (the first 0.98 guess was 1.1% high).
+# Override with env var if the pricing tier changes.
+DEFAULT_CHC_USD_RATE = 0.9689
 
 
 # Substring rules over entityName for BU inference. Keys must be unique enough
