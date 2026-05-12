@@ -8,10 +8,10 @@ definitions:
           - pip
         script:
           - pip install -r requirements.txt
-          - python main.py collect --month current --providers gcp,oci --verbose
+          - python main.py collect --month current --providers gcp,oci,clickhouse --verbose
           # Re-collect previous month to capture GCP billing records that arrive
           # 24-48h late. Idempotent (DELETE+INSERT) so safe to run daily.
-          - python main.py collect --month previous --providers gcp,oci --verbose
+          - python main.py collect --month previous --providers gcp,oci,clickhouse --verbose
 
     - step: &collect-monthly
         name: Collect monthly (OVH + BrightData + Bitbucket)

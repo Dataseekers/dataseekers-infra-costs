@@ -11,6 +11,7 @@ from collectors.oci import OCICollector
 from collectors.brightdata import BrightDataCollector
 from collectors.gcp import GCPCollector
 from collectors.bitbucket import BitbucketCollector
+from collectors.clickhouse import ClickHouseCollector
 
 
 COLLECTORS = {
@@ -19,6 +20,7 @@ COLLECTORS = {
     "brightdata": BrightDataCollector,
     "gcp": GCPCollector,
     "bitbucket": BitbucketCollector,
+    "clickhouse": ClickHouseCollector,
 }
 
 

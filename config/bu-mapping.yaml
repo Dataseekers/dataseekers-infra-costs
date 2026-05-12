@@ -93,3 +93,10 @@ brightdata:
 
 bitbucket:
   default: "platform"
+
+clickhouse:
+  # Map ClickHouse Cloud service ids (or names) to BU. Fill in after the
+  # first successful collect: descriptions in raw_costs will show the
+  # entity id/name returned by the API.
+  services: {}
+  default: "hotels"   # only hotels uses ClickHouse Cloud today

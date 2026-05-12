@@ -1,4 +1,4 @@
-name: Daily cost collection (GCP + OCI)
+name: Daily cost collection (GCP + OCI + ClickHouse)
 
 on:
   schedule:
@@ -19,7 +19,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Collect current month
-        run: python main.py collect --month current --providers gcp,oci --verbose
+        run: python main.py collect --month current --providers gcp,oci,clickhouse --verbose
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
@@ -27,13 +27,16 @@ jobs:
           OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
           OCI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
           OCI_REGION: ${{ secrets.OCI_REGION }}
+          CLICKHOUSE_CLOUD_API_KEY_ID: ${{ secrets.CLICKHOUSE_CLOUD_API_KEY_ID }}
+          CLICKHOUSE_CLOUD_API_KEY_SECRET: ${{ secrets.CLICKHOUSE_CLOUD_API_KEY_SECRET }}
+          CLICKHOUSE_CLOUD_ORG_ID: ${{ secrets.CLICKHOUSE_CLOUD_ORG_ID }}
 
       # Re-collect previous month to capture late-arriving GCP billing records.
       # GCP billing export can lag 24-48h, so the last day of each month
       # under-reports unless we re-run after data has settled. Idempotent
       # (DELETE+INSERT) so safe to run daily.
       - name: Re-collect previous month (catch late billing records)
-        run: python main.py collect --month previous --providers gcp,oci --verbose
+        run: python main.py collect --month previous --providers gcp,oci,clickhouse --verbose
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           OCI_TENANCY: ${{ secrets.OCI_TENANCY }}
@@ -41,3 +44,6 @@ jobs:
           OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
           OCI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
           OCI_REGION: ${{ secrets.OCI_REGION }}
+          CLICKHOUSE_CLOUD_API_KEY_ID: ${{ secrets.CLICKHOUSE_CLOUD_API_KEY_ID }}
+          CLICKHOUSE_CLOUD_API_KEY_SECRET: ${{ secrets.CLICKHOUSE_CLOUD_API_KEY_SECRET }}
+          CLICKHOUSE_CLOUD_ORG_ID: ${{ secrets.CLICKHOUSE_CLOUD_ORG_ID }}

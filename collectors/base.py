@@ -79,8 +79,8 @@ class CostCollector(ABC):
         if isinstance(provider_mapping, str):
             return provider_mapping
 
-        # Check in sub-mappings (projects, compartments, zones, etc.)
-        for section in ("projects", "compartments", "zones"):
+        # Check in sub-mappings (projects, compartments, zones, services, etc.)
+        for section in ("projects", "compartments", "zones", "services"):
             mapping = provider_mapping.get(section, {})
             if key in mapping:
                 return mapping[key]
