@@ -97,12 +97,17 @@ bitbucket:
 claude_ai:
   default: "platform"
 
-  # Total Claude.ai EUR per calendar month — sum of all invoices in
-  # claude.ai/admin-settings/billing for that month (Team plan subscription +
-  # extra usage auto-reloads). Update the day after the month closes by adding
-  # a new entry; the collector emits one record per filled entry.
-  monthly_eur:
-    "2026-04": 2502.89  # Apr 21 invoice €1620.41 (11 premium @€105.23 + 22 standard @€21.04, cycle Apr 21–May 21) + 18 extra-usage reloads €882.48
+  # Per calendar month, two components:
+  #   subscription_usd: Team plan list price (Premium $125/seat + Standard $25/seat).
+  #     Stable; refer to invoice line items for the cycle that starts in the month.
+  #     Converted to EUR via ECB rate at start of the month (see currency.py).
+  #   extra_usage_eur: sum of all auto-reload invoices dated in the month.
+  #     Native EUR (no list USD price for these top-ups).
+  # Update the day after each month closes; collector emits up to 2 records per entry.
+  monthly:
+    "2026-04":
+      subscription_usd: 1925   # 11 premium × $125 + 22 standard × $25 (cycle Apr 21–May 21)
+      extra_usage_eur: 882.48  # 18 auto-reloads
 
 clickhouse:
   # Collector infers BU from the entityName substring (rentacar/hotels/puig/
