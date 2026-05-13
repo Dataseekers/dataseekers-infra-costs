@@ -102,7 +102,7 @@ claude_ai:
   # extra usage auto-reloads). Update the day after the month closes by adding
   # a new entry; the collector emits one record per filled entry.
   monthly_eur:
-    "2026-04": 2502.89  # 22 seats subscription €1620.41 + 18 reloads €882.48
+    "2026-04": 2502.89  # Apr 21 invoice €1620.41 (11 premium @€105.23 + 22 standard @€21.04, cycle Apr 21–May 21) + 18 extra-usage reloads €882.48
 
 clickhouse:
   # Collector infers BU from the entityName substring (rentacar/hotels/puig/
