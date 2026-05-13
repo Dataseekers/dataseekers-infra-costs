@@ -12,6 +12,7 @@ from collectors.brightdata import BrightDataCollector
 from collectors.gcp import GCPCollector
 from collectors.bitbucket import BitbucketCollector
 from collectors.clickhouse import ClickHouseCollector
+from collectors.claude_ai import ClaudeAICollector
 
 
 COLLECTORS = {
@@ -21,6 +22,7 @@ COLLECTORS = {
     "gcp": GCPCollector,
     "bitbucket": BitbucketCollector,
     "clickhouse": ClickHouseCollector,
+    "claude_ai": ClaudeAICollector,
 }
 
 

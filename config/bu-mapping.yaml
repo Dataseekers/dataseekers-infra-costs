@@ -94,6 +94,16 @@ brightdata:
 bitbucket:
   default: "platform"
 
+claude_ai:
+  default: "platform"
+
+  # Total Claude.ai EUR per calendar month — sum of all invoices in
+  # claude.ai/admin-settings/billing for that month (Team plan subscription +
+  # extra usage auto-reloads). Update the day after the month closes by adding
+  # a new entry; the collector emits one record per filled entry.
+  monthly_eur:
+    "2026-04": 2502.89  # 22 seats subscription €1620.41 + 18 reloads €882.48
+
 clickhouse:
   # Collector infers BU from the entityName substring (rentacar/hotels/puig/
   # retail/tickets/ferries/flights/turobserver/paraty→platform). Use the

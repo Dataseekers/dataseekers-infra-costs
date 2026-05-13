@@ -1,4 +1,4 @@
-name: Monthly cost collection (OVH + BrightData + Bitbucket)
+name: Monthly cost collection (OVH + BrightData + Bitbucket + Claude.ai)
 
 on:
   schedule:
@@ -19,7 +19,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Collect monthly providers
-        run: python main.py collect --month previous --providers ovh,brightdata,bitbucket --verbose
+        run: python main.py collect --month previous --providers ovh,brightdata,bitbucket,claude_ai --verbose
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
@@ -40,3 +40,46 @@ jobs:
         run: python main.py report --month previous
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+
+      - name: Reminder if claude_ai entry missing
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python <<'EOF'
+          import subprocess, yaml
+          from datetime import date, timedelta
+
+          end = date.today().replace(day=1)
+          month = (end - timedelta(days=1)).strftime("%Y-%m")
+          with open("config/bu-mapping.yaml") as f:
+              cfg = yaml.safe_load(f) or {}
+          if (cfg.get("claude_ai") or {}).get("monthly_eur", {}).get(month):
+              print(f"OK: claude_ai entry present for {month}")
+              raise SystemExit(0)
+
+          existing = subprocess.run(
+              ["gh", "issue", "list",
+               "--search", f"Update claude_ai.monthly_eur for {month} in:title state:open",
+               "--json", "number", "--jq", "length"],
+              capture_output=True, text=True, check=True,
+          ).stdout.strip()
+          if existing != "0":
+              print(f"Reminder issue for {month} already open")
+              raise SystemExit(0)
+
+          body = (
+              f"Monthly cost collection found no entry for **{month}** under "
+              "`claude_ai.monthly_eur` in `config/bu-mapping.yaml`.\n\n"
+              "1. Go to https://claude.ai/admin-settings/organization → Billing\n"
+              f"2. Sum all invoices dated in {month}\n"
+              f"3. Add `\"{month}\": <total_eur>` under `claude_ai.monthly_eur`\n"
+              "4. Re-run [Monthly cost collection](../../actions/workflows/collect-monthly.yml)\n"
+          )
+          subprocess.run(
+              ["gh", "issue", "create",
+               "--title", f"Update claude_ai.monthly_eur for {month}",
+               "--body", body],
+              check=True,
+          )
+          EOF
