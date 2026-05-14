@@ -4,7 +4,8 @@
 
 - Python 3.12+
 - Google Cloud BigQuery (storage + views)
-- APIs: OVH, OCI, Bright Data, Bitbucket, GCP billing export
+- APIs: OVH, OCI, Bright Data, Bitbucket, GCP billing export, ClickHouse Cloud
+- Manual YAML input (no API): Claude.ai
 
 ## Commands
 
@@ -40,14 +41,17 @@ pip install -r requirements.txt
 ```
 collectors/
   base.py          # CostCollector ABC + CostRecord dataclass + BQ load
-  currency.py      # EUR conversion via ECB API
+  currency.py      # EUR conversion via ECB API (prefetch 90d + retries)
   gcp.py           # BigQuery billing export query
   ovh.py           # OVH billing API (signed requests)
   oci.py           # Oracle Cloud Usage API
   brightdata.py    # Zone cost API
   bitbucket.py     # Fixed subscription cost
+  clickhouse.py    # ClickHouse Cloud usageCost API (CHC unit, per-cycle rate)
+  claude_ai.py     # Claude.ai Team plan — manual yaml input, no API
 config/
   bu-mapping.yaml  # Provider resource → business unit mapping
+                   # Also: clickhouse.chc_usd_rates and claude_ai.monthly
 bigquery/
   schema.sql       # Table + views DDL
 main.py            # CLI entrypoint: collect, report, validate
@@ -71,11 +75,16 @@ main.py            # CLI entrypoint: collect, report, validate
 | Bright Data | `BRIGHTDATA_API_TOKEN` |
 | Bitbucket | `BITBUCKET_USERNAME`, `BITBUCKET_API_TOKEN`, `BITBUCKET_WORKSPACE`, `BITBUCKET_SUBSCRIPTION_USD` |
 | ClickHouse Cloud | `CLICKHOUSE_CLOUD_API_KEY_ID`, `CLICKHOUSE_CLOUD_API_KEY_SECRET`, `CLICKHOUSE_CLOUD_ORG_ID`, `CLICKHOUSE_CLOUD_CHC_USD_RATE` (optional, default 0.9689 USD/CHC for SCALE tier, derived from a Mar 18–Apr 18 invoice cross-check) |
+| Claude.ai | None — reads `config/bu-mapping.yaml > claude_ai.monthly` entry per month (`subscription_usd` + `extra_usage_eur`). Workflow opens reminder GitHub issue if entry is missing on day 3. |
 
 ## Related docs (`dataseekers-infra-docs`)
 
+- [Cost collectors inventory](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/cost-collectors-inventory.md) — snapshot of the 7 active collectors (auth, cadence, currency) and what's intentionally not collected.
 - [Monthly cost report runbook](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/runbooks/cost-report-monthly.md) — how to prepare the monthly email to management.
+- [Claude.ai billing quirks](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/claude-ai-billing.md) — no public API, two-component model (USD subscription + EUR overage), update flow.
+- [ClickHouse Cloud billing quirks](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/clickhouse-cloud-billing.md) — CHC unit, 18-to-18 cycle, per-cycle rate table.
 - [GCP billing export late records](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/gcp-billing-export-late-records.md) — why the daily workflow re-collects `--month previous`.
+- [Cost collector ↔ invoice validation](https://github.com/Dataseekers/dataseekers-infra-docs/blob/main/reference/cost-collector-invoice-validation.md) — pattern for cross-checking against the provider's invoice.
 
 ## Testing
 
