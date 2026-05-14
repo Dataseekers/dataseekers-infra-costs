@@ -141,6 +141,45 @@ def cmd_report(args):
         print(f"  {row.provider:20s} €{row.total:>10,.2f}  ({pct:.1f}%)")
 
 
+def cmd_inspect_ovh(args):
+    """Dump OVH bill line items for a month + optional project filter."""
+    start, end = get_month_range(args.month)
+    collector = OVHCollector()
+    rows = collector.inspect(start, end, project_id=args.project)
+
+    if not rows:
+        print(f"No OVH bill items for {args.month}" + (f" project={args.project}" if args.project else ""))
+        return
+
+    print(f"{len(rows)} line items for {args.month}" + (f" project={args.project}" if args.project else "") + "\n")
+
+    # Per-line dump
+    for r in rows:
+        period = ""
+        if r["period_start"] and r["period_end"]:
+            period = f"  {r['period_start'][:10]}→{r['period_end'][:10]}"
+        print(f"  €{r['total_price']:>10,.2f}  [{r['category']:8s}]  {r['description']}{period}")
+        if r["domain"]:
+            print(f"              domain={r['domain']}  qty={r['quantity']}  unit=€{r['unit_price']}")
+
+    # Aggregations
+    print("\nBy category:")
+    by_cat: dict[str, float] = {}
+    for r in rows:
+        by_cat[r["category"]] = by_cat.get(r["category"], 0) + r["total_price"]
+    for cat, total in sorted(by_cat.items(), key=lambda x: -x[1]):
+        print(f"  {cat:10s}  €{total:>10,.2f}")
+
+    print("\nBy project:")
+    by_proj: dict[str, float] = {}
+    for r in rows:
+        by_proj[r["project_id"]] = by_proj.get(r["project_id"], 0) + r["total_price"]
+    for proj, total in sorted(by_proj.items(), key=lambda x: -x[1]):
+        print(f"  {proj}  €{total:>10,.2f}")
+
+    print(f"\nGrand total: €{sum(r['total_price'] for r in rows):,.2f}")
+
+
 def cmd_validate(args):
     start, end = get_month_range(args.month)
     client = get_bq_client()
@@ -207,6 +246,11 @@ def main():
     p_validate = subparsers.add_parser("validate", help="Validate collected data")
     p_validate.add_argument("--month", required=True, help="Month (YYYY-MM, 'previous', or 'current')")
 
+    # inspect-ovh
+    p_inspect = subparsers.add_parser("inspect-ovh", help="Dump raw OVH bill line items (no BQ write)")
+    p_inspect.add_argument("--month", required=True, help="Month (YYYY-MM, 'previous', or 'current')")
+    p_inspect.add_argument("--project", help="Filter to a single OVH Public Cloud project ID")
+
     args = parser.parse_args()
 
     if args.command == "collect":
@@ -217,6 +261,8 @@ def main():
         issues = cmd_validate(args)
         if issues:
             sys.exit(1)
+    elif args.command == "inspect-ovh":
+        cmd_inspect_ovh(args)
 
 
 if __name__ == "__main__":

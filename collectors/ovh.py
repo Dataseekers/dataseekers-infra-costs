@@ -101,6 +101,48 @@ class OVHCollector(CostCollector):
 
         return records
 
+    def inspect(self, start_date: date, end_date: date, project_id: str | None = None) -> list[dict]:
+        """Return raw bill line items (no BQ write) for ad-hoc analysis.
+
+        Each item carries description, domain, periodStart/End, quantity,
+        unitPrice, totalPrice and the resolved bill_id / project_id / bu.
+        Pass project_id to filter to a single Public Cloud project.
+        """
+        rows: list[dict] = []
+        bill_ids = self._request("GET", "/me/bill")
+
+        for bill_id in bill_ids:
+            bill = self._request("GET", f"/me/bill/{bill_id}")
+            bill_date = datetime.fromisoformat(bill["date"]).date()
+            if not (start_date <= bill_date < end_date):
+                continue
+
+            order_id = bill.get("orderId")
+            mapped_project = ORDER_TO_PROJECT.get(order_id, "unknown")
+            if project_id and mapped_project != project_id:
+                continue
+
+            bu = self.get_bu(mapped_project)
+
+            for detail_id in self._request("GET", f"/me/bill/{bill_id}/details"):
+                d = self._request("GET", f"/me/bill/{bill_id}/details/{detail_id}")
+                rows.append({
+                    "bill_id": bill_id,
+                    "bill_date": bill_date.isoformat(),
+                    "order_id": order_id,
+                    "project_id": mapped_project,
+                    "bu": bu,
+                    "description": d.get("description", ""),
+                    "domain": d.get("domain", ""),
+                    "period_start": d.get("periodStart"),
+                    "period_end": d.get("periodEnd"),
+                    "quantity": d.get("quantity"),
+                    "unit_price": (d.get("unitPrice") or {}).get("value"),
+                    "total_price": (d.get("totalPrice") or {}).get("value", 0),
+                    "category": self._classify(d.get("description", "")),
+                })
+        return rows
+
     def _classify(self, description: str) -> str:
         desc_lower = description.lower()
         if any(w in desc_lower for w in ("instance", "savings plan", "hourly consumption")):
