@@ -50,7 +50,7 @@ class GCPCollector(CostCollector):
 
         for row in results:
             project_id = row.project_id or "unknown"
-            bu = self.get_bu(project_id)
+            bu = self.get_bu(project_id, row.usage_date)
             category = self._classify(row.service_desc)
             currency = row.currency or "EUR"
 

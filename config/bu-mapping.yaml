@@ -14,7 +14,11 @@ gcp:
     "dataseekers-e2543": "platform"
     "jenkins-auth-272115": "platform"
     "ai-mapping-seeker": "platform"
-    "price-seeker-v2": "psv3"
+    # price-seeker-v2 was the psv3 product project until Apr 2026; from May 2026
+    # onwards the remaining workload is hotels-only, so costs roll up to hotels.
+    "price-seeker-v2":
+      - {from: null,         to: "2026-04-30", bu: "psv3"}
+      - {from: "2026-05-01", to: null,         bu: "hotels"}
     "looker-465318": "platform"
     "looker-api-client": "platform"
     "wiki-seeker-ds": "platform"
