@@ -74,7 +74,7 @@ class CostCollector(ABC):
     def collect(self, start_date: date, end_date: date) -> list[CostRecord]:
         raise NotImplementedError
 
-    def get_bu(self, key: str) -> str:
+    def get_bu(self, key: str, record_date: date | None = None) -> str:
         provider_mapping = self._bu_mapping.get(self.provider, {})
         if isinstance(provider_mapping, str):
             return provider_mapping
@@ -83,9 +83,35 @@ class CostCollector(ABC):
         for section in ("projects", "compartments", "zones", "services"):
             mapping = provider_mapping.get(section, {})
             if key in mapping:
-                return mapping[key]
+                value = mapping[key]
+                if isinstance(value, list):
+                    return self._resolve_dated_bu(key, value, record_date)
+                return value
 
         return provider_mapping.get("default", "platform")
+
+    @staticmethod
+    def _resolve_dated_bu(key: str, ranges: list, record_date: date | None) -> str:
+        # When the record has no date (e.g. fixed-cost collectors), fall back
+        # to the currently-open range (the one with `to: null`).
+        if record_date is None:
+            for entry in ranges:
+                if entry.get("to") is None:
+                    return entry["bu"]
+            return ranges[-1]["bu"]
+        for entry in ranges:
+            frm = entry.get("from")
+            to = entry.get("to")
+            frm_d = date.fromisoformat(frm) if frm else None
+            to_d = date.fromisoformat(to) if to else None
+            if frm_d and record_date < frm_d:
+                continue
+            if to_d and record_date > to_d:
+                continue
+            return entry["bu"]
+        raise ValueError(
+            f"No date range matches {record_date} for key {key!r} in bu-mapping"
+        )
 
     def load(self, records: list[CostRecord], bq_client: bigquery.Client | None = None):
         if not records:
