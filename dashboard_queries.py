@@ -8,6 +8,9 @@ import streamlit as st
 from collectors.base import get_bq_client
 
 
+_RAW = "`dataseekers-core.costs.raw_costs`"
+
+
 @st.cache_data(ttl=3600)
 def query_bq(sql: str) -> pd.DataFrame:
     client = get_bq_client()
@@ -119,4 +122,91 @@ def get_trend_by_bu() -> pd.DataFrame:
             SUM(amount) as total
         FROM `dataseekers-core.costs.raw_costs`
         GROUP BY 1, 2 ORDER BY 1
+    """)
+
+
+# ─── Drill-down helpers (Phase 1+) ─────────────────────────────────────────
+
+
+@st.cache_data(ttl=3600)
+def get_available_providers() -> list[str]:
+    df = query_bq(f"SELECT DISTINCT provider FROM {_RAW} ORDER BY provider")
+    return df["provider"].tolist()
+
+
+def _filter_clause(provider: str | None, business_unit: str | None) -> str:
+    parts = []
+    if provider:
+        parts.append(f"provider = '{provider}'")
+    if business_unit:
+        parts.append(f"business_unit = '{business_unit}'")
+    return (" AND " + " AND ".join(parts)) if parts else ""
+
+
+@st.cache_data(ttl=3600)
+def query_total(provider: str | None, business_unit: str | None, start: date, end: date) -> float:
+    where = f"WHERE date >= '{start}' AND date < '{end}'{_filter_clause(provider, business_unit)}"
+    df = query_bq(f"SELECT SUM(amount) AS total FROM {_RAW} {where}")
+    if len(df) == 0:
+        return 0.0
+    val = df["total"].iloc[0]
+    return 0.0 if val is None or pd.isna(val) else float(val)
+
+
+@st.cache_data(ttl=3600)
+def query_daily(provider: str | None, business_unit: str | None, start: date, end: date) -> pd.DataFrame:
+    where = f"WHERE date >= '{start}' AND date < '{end}'{_filter_clause(provider, business_unit)}"
+    return query_bq(f"""
+        SELECT date, SUM(amount) AS total
+        FROM {_RAW} {where}
+        GROUP BY 1 ORDER BY 1
+    """)
+
+
+@st.cache_data(ttl=3600)
+def query_by_dim(provider: str | None, business_unit: str | None, dim: str, start: date, end: date) -> pd.DataFrame:
+    if dim not in ("business_unit", "provider", "category"):
+        raise ValueError(f"unsupported dim: {dim!r}")
+    where = f"WHERE date >= '{start}' AND date < '{end}'{_filter_clause(provider, business_unit)}"
+    return query_bq(f"""
+        SELECT {dim}, SUM(amount) AS total
+        FROM {_RAW} {where}
+        GROUP BY 1 ORDER BY total DESC
+    """)
+
+
+@st.cache_data(ttl=3600)
+def query_top_lines_mom(
+    provider: str | None,
+    business_unit: str | None,
+    start: date,
+    end: date,
+    prev_start: date,
+    prev_end: date,
+    limit: int = 20,
+) -> pd.DataFrame:
+    extra = _filter_clause(provider, business_unit)
+    return query_bq(f"""
+        WITH curr AS (
+          SELECT description, business_unit, provider, category, SUM(amount) AS amt
+          FROM {_RAW}
+          WHERE date >= '{start}' AND date < '{end}'{extra}
+          GROUP BY 1, 2, 3, 4
+        ),
+        prev AS (
+          SELECT description, SUM(amount) AS amt
+          FROM {_RAW}
+          WHERE date >= '{prev_start}' AND date < '{prev_end}'{extra}
+          GROUP BY 1
+        )
+        SELECT
+          COALESCE(c.description, p.description) AS description,
+          c.business_unit, c.provider, c.category,
+          IFNULL(c.amt, 0) AS current_amt,
+          IFNULL(p.amt, 0) AS prev_amt,
+          IFNULL(c.amt, 0) - IFNULL(p.amt, 0) AS delta_eur,
+          SAFE_DIVIDE(IFNULL(c.amt, 0) - IFNULL(p.amt, 0), p.amt) * 100 AS delta_pct
+        FROM curr c FULL OUTER JOIN prev p USING (description)
+        ORDER BY ABS(IFNULL(c.amt, 0) - IFNULL(p.amt, 0)) DESC
+        LIMIT {limit}
     """)
