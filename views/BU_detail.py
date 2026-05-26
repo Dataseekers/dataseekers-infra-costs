@@ -6,6 +6,7 @@ import plotly.express as px
 import streamlit as st
 
 from dashboard_components import format_eur, period_selector_ui
+from dashboard_navigation import PROVIDER_DETAIL
 from dashboard_queries import (
     get_available_business_units,
     get_available_months,
@@ -17,7 +18,6 @@ from dashboard_queries import (
     query_total,
 )
 
-st.set_page_config(page_title="BU detail", page_icon="🏢", layout="wide")
 st.title("Business Unit detail")
 
 months = get_available_months()
@@ -121,14 +121,13 @@ with col_left:
         st.plotly_chart(fig, use_container_width=True)
 
         provider_options = by_provider["provider"].tolist()
-        gc1, gc2 = st.columns([3, 1])
-        with gc1:
-            target_provider = st.selectbox("Drill into provider", provider_options, key="bu_goto_provider")
-        with gc2:
-            st.write("")
-            if st.button("View detail →", key="bu_goto_provider_btn"):
-                st.session_state["selected_provider"] = target_provider
-                st.switch_page("pages/1_Provider_detail.py")
+        if provider_options:
+            gc1, gc2 = st.columns([3, 1])
+            with gc1:
+                st.selectbox("Drill into provider", provider_options, key="selected_provider")
+            with gc2:
+                st.write("")
+                st.page_link(PROVIDER_DETAIL, label="View detail →")
     else:
         st.info("No data.")
 

@@ -59,15 +59,19 @@ config/
 bigquery/
   schema.sql            # Table + views DDL
 main.py                 # CLI entrypoint: collect, report, validate
-dashboard.py            # Streamlit Overview page (entry point: `streamlit run dashboard.py`)
+dashboard.py            # Streamlit entry: `st.set_page_config` + `st.navigation(ALL_PAGES).run()`
+dashboard_navigation.py # `st.Page` handles (OVERVIEW, PROVIDER_DETAIL, BU_DETAIL) shared by all pages
+dashboard_overview.py   # Overview page body (rendered when `dashboard.py` dispatches to OVERVIEW)
 dashboard_queries.py    # Cached BQ queries shared across pages
 dashboard_components.py # UI helpers: period_selector_ui (Month/3M/Custom), format_eur
-pages/
-  1_Provider_detail.py  # Drill-down per provider (KPIs, daily trend, BU/category, top services MoM)
-  2_BU_detail.py        # Drill-down per business unit (KPIs, monthly trend, providers/category, top services MoM, day×provider heatmap)
+views/
+  Provider_detail.py    # Drill-down per provider (KPIs, daily trend, BU/category, top services MoM)
+  BU_detail.py          # Drill-down per business unit (KPIs, monthly trend, providers/category, top services MoM, day×provider heatmap)
 ```
 
-State sharing between pages uses `st.session_state` keys: `selected_month`, `selected_provider`, `selected_bu`. Each detail page exposes a "Drill into …" widget pair (selectbox + button) so users can jump from Overview → detail and between detail pages with the chosen item pre-selected.
+Multipage uses the modern `st.navigation` API (not the auto-discovered `pages/` directory — directory is named `views/` to keep auto-discovery off). Cross-page links are built with `st.page_link(BU_DETAIL, ...)` against the Page objects in `dashboard_navigation.py`, which avoids the path-string resolution bugs of `st.switch_page`.
+
+State sharing between pages uses `st.session_state` keys: `selected_month`, `selected_provider`, `selected_bu`. Each detail page exposes a "Drill into …" selectbox + page_link pair so users can jump from Overview → detail and between detail pages with the chosen item pre-selected.
 
 ## BigQuery
 
