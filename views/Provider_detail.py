@@ -16,7 +16,7 @@ from dashboard_queries import (
     query_total,
 )
 
-st.title("Provider detail")
+st.title("Costs by provider")
 
 months = get_available_months()
 providers = get_available_providers()
