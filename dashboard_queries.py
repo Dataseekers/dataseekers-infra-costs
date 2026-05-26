@@ -134,6 +134,34 @@ def get_available_providers() -> list[str]:
     return df["provider"].tolist()
 
 
+@st.cache_data(ttl=3600)
+def get_available_business_units() -> list[str]:
+    df = query_bq(f"SELECT DISTINCT business_unit FROM {_RAW} ORDER BY business_unit")
+    return df["business_unit"].tolist()
+
+
+@st.cache_data(ttl=3600)
+def query_bu_monthly_trend(business_unit: str) -> pd.DataFrame:
+    return query_bq(f"""
+        SELECT FORMAT_DATE('%Y-%m', DATE_TRUNC(date, MONTH)) AS month,
+               SUM(amount) AS total
+        FROM {_RAW}
+        WHERE business_unit = '{business_unit}'
+        GROUP BY 1 ORDER BY 1
+    """)
+
+
+@st.cache_data(ttl=3600)
+def query_daily_by_provider(business_unit: str, start: date, end: date) -> pd.DataFrame:
+    return query_bq(f"""
+        SELECT date, provider, SUM(amount) AS total
+        FROM {_RAW}
+        WHERE business_unit = '{business_unit}'
+          AND date >= '{start}' AND date < '{end}'
+        GROUP BY 1, 2 ORDER BY 1
+    """)
+
+
 def _filter_clause(provider: str | None, business_unit: str | None) -> str:
     parts = []
     if provider:
