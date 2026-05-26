@@ -51,7 +51,7 @@ with col_left:
             names="business_unit",
             hole=0.4,
         )
-        fig.update_traces(textinfo="label+percent", textposition="outside")
+        fig.update_traces(textinfo="label+percent", textposition="outside", automargin=True)
         fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
 
