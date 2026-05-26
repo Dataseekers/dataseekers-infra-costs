@@ -18,7 +18,7 @@ from dashboard_queries import (
     query_total,
 )
 
-st.title("Business Unit detail")
+st.title("Costs by business unit")
 
 months = get_available_months()
 bus = get_available_business_units()

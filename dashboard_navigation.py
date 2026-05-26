@@ -11,23 +11,23 @@ import streamlit as st
 OVERVIEW = st.Page(
     "dashboard_overview.py",
     title="Overview",
-    icon="📊",
+    icon="💰",
     default=True,
     url_path="overview",
 )
 
 PROVIDER_DETAIL = st.Page(
     "views/Provider_detail.py",
-    title="Provider detail",
-    icon="🔍",
-    url_path="provider_detail",
+    title="By provider",
+    icon="⚙️",
+    url_path="by_provider",
 )
 
 BU_DETAIL = st.Page(
     "views/BU_detail.py",
-    title="BU detail",
-    icon="🏢",
-    url_path="bu_detail",
+    title="By business unit",
+    icon="🎯",
+    url_path="by_business_unit",
 )
 
 ALL_PAGES = [OVERVIEW, PROVIDER_DETAIL, BU_DETAIL]
