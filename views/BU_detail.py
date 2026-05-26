@@ -135,7 +135,7 @@ with col_right:
     st.subheader(f"By Category — {selected_bu}")
     if len(by_category) > 0:
         fig = px.pie(by_category, values="total", names="category", hole=0.4)
-        fig.update_traces(textinfo="label+percent")
+        fig.update_traces(textinfo="label+percent", automargin=True)
         fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
     else:
