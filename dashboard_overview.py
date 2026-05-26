@@ -3,7 +3,6 @@
 import plotly.express as px
 import streamlit as st
 
-from dashboard_navigation import BU_DETAIL, PROVIDER_DETAIL
 from dashboard_queries import (
     get_available_months,
     get_month_data,
@@ -56,15 +55,6 @@ with col_left:
         fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
 
-        bu_options = data["by_bu"]["business_unit"].tolist()
-        if bu_options:
-            gc1, gc2 = st.columns([3, 1])
-            with gc1:
-                st.selectbox("Drill into BU", bu_options, key="selected_bu")
-            with gc2:
-                st.write("")  # spacer to align with selectbox label
-                st.page_link(BU_DETAIL, label="View detail →")
-
 with col_right:
     st.subheader("Cost by Provider")
     if len(data["by_provider"]) > 0:
@@ -83,15 +73,6 @@ with col_right:
         )
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
-
-        provider_options = data["by_provider"]["provider"].tolist()
-        if provider_options:
-            gc1, gc2 = st.columns([3, 1])
-            with gc1:
-                st.selectbox("Drill into provider", provider_options, key="selected_provider")
-            with gc2:
-                st.write("")
-                st.page_link(PROVIDER_DETAIL, label="View detail →")
 
 # ── Row 2: Daily trend + Monthly evolution ──
 col_left, col_right = st.columns(2)
