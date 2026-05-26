@@ -28,6 +28,9 @@ python main.py validate --month 2026-02
 # Month shortcuts
 python main.py collect --month previous
 python main.py collect --month current
+
+# Dashboard (Streamlit, multipage)
+streamlit run dashboard.py
 ```
 
 ## Install
@@ -40,22 +43,31 @@ pip install -r requirements.txt
 
 ```
 collectors/
-  base.py          # CostCollector ABC + CostRecord dataclass + BQ load
-  currency.py      # EUR conversion via ECB API (prefetch 90d + retries)
-  gcp.py           # BigQuery billing export query
-  ovh.py           # OVH billing API (signed requests)
-  oci.py           # Oracle Cloud Usage API
-  brightdata.py    # Zone cost API
-  bitbucket.py     # Fixed subscription cost
-  clickhouse.py    # ClickHouse Cloud usageCost API (CHC unit, per-cycle rate)
-  claude_ai.py     # Claude.ai Team plan — manual yaml input, no API
+  base.py               # CostCollector ABC + CostRecord dataclass + BQ load
+                        # get_bu(key, record_date=None) — supports date-ranged BU mapping
+  currency.py           # EUR conversion via ECB API (prefetch 90d + retries)
+  gcp.py                # BigQuery billing export query
+  ovh.py                # OVH billing API (signed requests)
+  oci.py                # Oracle Cloud Usage API
+  brightdata.py         # Zone cost API
+  bitbucket.py          # Fixed subscription cost
+  clickhouse.py         # ClickHouse Cloud usageCost API (CHC unit, per-cycle rate)
+  claude_ai.py          # Claude.ai Team plan — manual yaml input, no API
 config/
-  bu-mapping.yaml  # Provider resource → business unit mapping
-                   # Also: clickhouse.chc_usd_rates and claude_ai.monthly
+  bu-mapping.yaml       # Provider resource → business unit mapping
+                        # Also: clickhouse.chc_usd_rates and claude_ai.monthly
 bigquery/
-  schema.sql       # Table + views DDL
-main.py            # CLI entrypoint: collect, report, validate
+  schema.sql            # Table + views DDL
+main.py                 # CLI entrypoint: collect, report, validate
+dashboard.py            # Streamlit Overview page (entry point: `streamlit run dashboard.py`)
+dashboard_queries.py    # Cached BQ queries shared across pages
+dashboard_components.py # UI helpers: period_selector_ui (Month/3M/Custom), format_eur
+pages/
+  1_Provider_detail.py  # Drill-down per provider (KPIs, daily trend, BU/category, top services MoM)
+  2_BU_detail.py        # Drill-down per business unit (KPIs, monthly trend, providers/category, top services MoM, day×provider heatmap)
 ```
+
+State sharing between pages uses `st.session_state` keys: `selected_month`, `selected_provider`, `selected_bu`. Each detail page exposes a "Drill into …" widget pair (selectbox + button) so users can jump from Overview → detail and between detail pages with the chosen item pre-selected.
 
 ## BigQuery
 

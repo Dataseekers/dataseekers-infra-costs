@@ -25,7 +25,7 @@ if not months:
     st.warning("No data available yet.")
     st.stop()
 
-selected_month = st.selectbox("Month", months, index=0)
+selected_month = st.selectbox("Month", months, key="selected_month")
 data = get_month_data(selected_month)
 
 # ── KPI cards ──
@@ -63,6 +63,16 @@ with col_left:
         fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
         st.plotly_chart(fig, use_container_width=True)
 
+        bu_options = data["by_bu"]["business_unit"].tolist()
+        gc1, gc2 = st.columns([3, 1])
+        with gc1:
+            target_bu = st.selectbox("Drill into BU", bu_options, key="overview_goto_bu")
+        with gc2:
+            st.write("")  # spacer to align with selectbox label
+            if st.button("View detail →", key="overview_goto_bu_btn"):
+                st.session_state["selected_bu"] = target_bu
+                st.switch_page("pages/2_BU_detail.py")
+
 with col_right:
     st.subheader("Cost by Provider")
     if len(data["by_provider"]) > 0:
@@ -81,6 +91,16 @@ with col_right:
         )
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
+
+        provider_options = data["by_provider"]["provider"].tolist()
+        gc1, gc2 = st.columns([3, 1])
+        with gc1:
+            target_provider = st.selectbox("Drill into provider", provider_options, key="overview_goto_provider")
+        with gc2:
+            st.write("")
+            if st.button("View detail →", key="overview_goto_provider_btn"):
+                st.session_state["selected_provider"] = target_provider
+                st.switch_page("pages/1_Provider_detail.py")
 
 # ── Row 2: Daily trend + Monthly evolution ──
 col_left, col_right = st.columns(2)

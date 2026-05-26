@@ -97,6 +97,16 @@ with col_left:
         )
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
+
+        bu_options = by_bu["business_unit"].tolist()
+        gc1, gc2 = st.columns([3, 1])
+        with gc1:
+            target_bu = st.selectbox("Drill into BU", bu_options, key="provider_goto_bu")
+        with gc2:
+            st.write("")
+            if st.button("View detail →", key="provider_goto_bu_btn"):
+                st.session_state["selected_bu"] = target_bu
+                st.switch_page("pages/2_BU_detail.py")
     else:
         st.info("No data.")
 

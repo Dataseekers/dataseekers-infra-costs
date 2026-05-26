@@ -119,6 +119,16 @@ with col_left:
         )
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
+
+        provider_options = by_provider["provider"].tolist()
+        gc1, gc2 = st.columns([3, 1])
+        with gc1:
+            target_provider = st.selectbox("Drill into provider", provider_options, key="bu_goto_provider")
+        with gc2:
+            st.write("")
+            if st.button("View detail →", key="bu_goto_provider_btn"):
+                st.session_state["selected_provider"] = target_provider
+                st.switch_page("pages/1_Provider_detail.py")
     else:
         st.info("No data.")
 
