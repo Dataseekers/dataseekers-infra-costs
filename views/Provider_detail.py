@@ -73,13 +73,20 @@ k5.metric("Top service", top_service)
 st.divider()
 
 # ── Chart 1: Daily cost ──
-st.subheader(f"Daily cost — {period.label}")
+# Hide the chart when all records fall on day 1 of a month — signature of
+# providers that are collected monthly (ovh, brightdata, bitbucket, claude_ai)
+# and stored as a single row on the 1st. Detection is data-driven so a new
+# monthly collector wouldn't need a code change here.
 daily = query_daily(selected_provider, None, period.start, period.end)
 if len(daily) > 0:
-    fig = px.bar(daily, x="date", y="total")
-    fig.update_layout(xaxis_title="", yaxis_title="€", margin=dict(t=20, b=20))
-    st.plotly_chart(fig, use_container_width=True)
+    is_monthly_provider = pd.to_datetime(daily["date"]).dt.day.eq(1).all()
+    if not is_monthly_provider:
+        st.subheader(f"Daily cost — {period.label}")
+        fig = px.bar(daily, x="date", y="total")
+        fig.update_layout(xaxis_title="", yaxis_title="€", margin=dict(t=20, b=20))
+        st.plotly_chart(fig, use_container_width=True)
 else:
+    st.subheader(f"Daily cost — {period.label}")
     st.info("No data in this period.")
 
 # ── Chart 2 + 3: Breakdowns ──
