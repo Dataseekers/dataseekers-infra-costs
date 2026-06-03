@@ -112,6 +112,9 @@ claude_ai:
     "2026-04":
       subscription_usd: 1925   # 11 premium × $125 + 22 standard × $25 (cycle Apr 21–May 21)
       extra_usage_eur: 882.48  # 18 auto-reloads
+    "2026-05":
+      subscription_usd: 2325   # 15 premium × $125 + 18 standard × $25 (cycle May 21–Jun 21; invoice €1,957.17)
+      extra_usage_eur: 325.05  # 9 auto-reloads
 
 clickhouse:
   # Collector infers BU from the entityName substring (rentacar/hotels/puig/
