@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "0 8 3 * *"
   workflow_dispatch:
+    inputs:
+      month:
+        description: "Month to collect (YYYY-MM, 'previous', or 'current')"
+        required: false
+        default: "previous"
+      providers:
+        description: "Comma-separated providers to collect"
+        required: false
+        default: "ovh,brightdata,bitbucket,claude_ai"
 
 jobs:
   collect:
@@ -22,7 +31,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Collect monthly providers
-        run: python main.py collect --month previous --providers ovh,brightdata,bitbucket,claude_ai --verbose
+        run: python main.py collect --month "${{ github.event.inputs.month || 'previous' }}" --providers "${{ github.event.inputs.providers || 'ovh,brightdata,bitbucket,claude_ai' }}" --verbose
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
@@ -35,12 +44,12 @@ jobs:
           BITBUCKET_SUBSCRIPTION_USD: "354.05"
 
       - name: Validate
-        run: python main.py validate --month previous
+        run: python main.py validate --month "${{ github.event.inputs.month || 'previous' }}"
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
 
       - name: Report
-        run: python main.py report --month previous
+        run: python main.py report --month "${{ github.event.inputs.month || 'previous' }}"
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
 

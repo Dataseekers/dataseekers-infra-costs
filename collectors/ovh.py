@@ -15,7 +15,7 @@ ORDER_TO_PROJECT = {
     245611311: "a1676b228191442aa3838b8e18e207c7",
     243683322: "a1676b228191442aa3838b8e18e207c7",
     # tickets_seeker
-    245610356: "a1676b228191442aa3838b8e18e207c7",  # TODO: verify, may be tickets
+    245610356: "e046bdd7877442a981ddd35a2d010c11",  # tickets (verified 2026-06-17)
     243684787: "e046bdd7877442a981ddd35a2d010c11",
     # development
     245601669: "7cd0c51d3ecd46e0a2e9f0b862c45add",
