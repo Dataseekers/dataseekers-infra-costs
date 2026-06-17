@@ -8,16 +8,24 @@ from .base import CostCollector, CostRecord
 
 
 # Mapping of known OVH order IDs to cloud project IDs.
-# Each cloud project generates bills with the same orderId on renewal.
-# Obtain these by checking /me/bill/{id} for recent bills of each project.
+# WARNING: OVH mints a NEW orderId for every monthly bill, so this map needs a
+# fresh entry per project each month. The tickets project (e046…) is the single
+# ~€1.3k–2.5k Public Cloud bill each month; the larger ~€4.7k–6.4k bill is the
+# shared c-ovh cluster (platform). Obtain new orderIds from the bill list in the
+# OVH manager (or /me/bill). TODO: resolve the project from the bill detail's
+# `domain`/`serviceName` to stop maintaining this map by hand.
 ORDER_TO_PROJECT = {
-    # datasekeers (c-ovh shared cluster)
+    # ── tickets (project e046…) — one bill/month, orderId changes monthly ──
+    241718298: "e046bdd7877442a981ddd35a2d010c11",  # Jan 2026  €1367.94
+    243684787: "e046bdd7877442a981ddd35a2d010c11",  # Feb 2026  €1469.63
+    245610356: "e046bdd7877442a981ddd35a2d010c11",  # Mar 2026  €1383.14
+    247895564: "e046bdd7877442a981ddd35a2d010c11",  # Apr 2026  €1496.90
+    249647283: "e046bdd7877442a981ddd35a2d010c11",  # May 2026  €1988.90
+    251615387: "e046bdd7877442a981ddd35a2d010c11",  # Jun 2026  €2119.78
+    # ── c-ovh shared cluster (project a1676…) = platform ──
     245611311: "a1676b228191442aa3838b8e18e207c7",
     243683322: "a1676b228191442aa3838b8e18e207c7",
-    # tickets_seeker
-    245610356: "e046bdd7877442a981ddd35a2d010c11",  # tickets (verified 2026-06-17)
-    243684787: "e046bdd7877442a981ddd35a2d010c11",
-    # development
+    # ── development (project 7cd0c…) = platform ──
     245601669: "7cd0c51d3ecd46e0a2e9f0b862c45add",
     243700082: "7cd0c51d3ecd46e0a2e9f0b862c45add",
 }
