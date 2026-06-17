@@ -7,10 +7,18 @@ from dashboard_queries import (
     get_available_months,
     get_month_data,
     get_monthly_trend,
+    get_segregated_bus,
     get_trend_by_bu,
 )
 
 st.title("Dataseekers Infrastructure Costs")
+
+_segregated = get_segregated_bus()
+if _segregated:
+    st.caption(
+        "Org-wide totals below **exclude** " + ", ".join(_segregated)
+        + " (shown only under **By business unit**)."
+    )
 
 months = get_available_months()
 if not months:
@@ -142,7 +150,6 @@ if len(trend_bu) > 0:
 st.subheader("Top 15 Cost Lines")
 if len(data["top_lines"]) > 0:
     display = data["top_lines"].copy()
-    display["total"] = display["total"].apply(lambda x: f"€{x:,.2f}")
     st.dataframe(
         display,
         use_container_width=True,
@@ -152,6 +159,6 @@ if len(data["top_lines"]) > 0:
             "provider": "Provider",
             "category": "Category",
             "description": "Description",
-            "total": "Amount",
+            "total": st.column_config.NumberColumn("Amount", format="€%.2f"),
         },
     )

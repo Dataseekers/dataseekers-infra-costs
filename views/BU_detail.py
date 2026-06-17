@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Business Unit drill-down: KPIs, monthly trend, provider/category breakdowns, top services."""
 
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 
@@ -144,23 +143,19 @@ with col_right:
 # ── Chart 4: Top cost lines with MoM ──
 st.subheader(f"Top 20 cost lines — {selected_bu}")
 if len(top_lines) > 0:
+    # Keep the money/percent columns NUMERIC and format via column_config so the
+    # table sorts by value, not by the formatted string ("€1,090.01" < "€894.89").
     display = top_lines.copy().drop(columns=["business_unit"])
-    display["current_amt"] = display["current_amt"].apply(lambda x: format_eur(x, decimals=2))
-    display["prev_amt"] = display["prev_amt"].apply(lambda x: format_eur(x, decimals=2))
-    display["delta_eur"] = display["delta_eur"].apply(lambda x: f"€{x:+,.2f}")
-    display["delta_pct"] = display["delta_pct"].apply(
-        lambda x: f"{x:+.1f}%" if pd.notna(x) else "—"
-    )
     st.dataframe(
         display, use_container_width=True, hide_index=True,
         column_config={
             "description": "Description",
             "provider": "Provider",
             "category": "Category",
-            "current_amt": "Current",
-            "prev_amt": "Previous",
-            "delta_eur": "Δ €",
-            "delta_pct": "Δ %",
+            "current_amt": st.column_config.NumberColumn("Current", format="€%.2f"),
+            "prev_amt": st.column_config.NumberColumn("Previous", format="€%.2f"),
+            "delta_eur": st.column_config.NumberColumn("Δ €", format="€%+.2f"),
+            "delta_pct": st.column_config.NumberColumn("Δ %", format="%+.1f%%"),
         },
     )
 else:

@@ -10,6 +10,7 @@ from dashboard_navigation import BU_DETAIL
 from dashboard_queries import (
     get_available_months,
     get_available_providers,
+    get_segregated_bus,
     query_by_dim,
     query_daily,
     query_top_lines_mom,
@@ -32,20 +33,23 @@ with c_right:
     period = period_selector_ui(months)
 
 # ── Aggregations ──
-total = query_total(selected_provider, None, period.start, period.end)
-prev_total = query_total(selected_provider, None, period.prev_start, period.prev_end)
-org_total = query_total(None, None, period.start, period.end)
+# Provider detail is a global view: drop segregated BUs everywhere so its totals,
+# share and breakdowns match the Overview (segregated BUs live in their own page).
+segregated = get_segregated_bus()
+total = query_total(selected_provider, None, period.start, period.end, exclude_bus=segregated)
+prev_total = query_total(selected_provider, None, period.prev_start, period.prev_end, exclude_bus=segregated)
+org_total = query_total(None, None, period.start, period.end, exclude_bus=segregated)
 
 mom_pct = ((total - prev_total) / prev_total * 100) if prev_total > 0 else None
 share_pct = (total / org_total * 100) if org_total > 0 else 0
 delta_eur = total - prev_total
 
-by_bu = query_by_dim(selected_provider, None, "business_unit", period.start, period.end)
-by_category = query_by_dim(selected_provider, None, "category", period.start, period.end)
+by_bu = query_by_dim(selected_provider, None, "business_unit", period.start, period.end, exclude_bus=segregated)
+by_category = query_by_dim(selected_provider, None, "category", period.start, period.end, exclude_bus=segregated)
 top_lines = query_top_lines_mom(
     selected_provider, None,
     period.start, period.end, period.prev_start, period.prev_end,
-    limit=20,
+    limit=20, exclude_bus=segregated,
 )
 
 top_bu = by_bu["business_unit"].iloc[0] if len(by_bu) > 0 else "—"
@@ -77,7 +81,7 @@ st.divider()
 # providers that are collected monthly (ovh, brightdata, bitbucket, claude_ai)
 # and stored as a single row on the 1st. Detection is data-driven so a new
 # monthly collector wouldn't need a code change here.
-daily = query_daily(selected_provider, None, period.start, period.end)
+daily = query_daily(selected_provider, None, period.start, period.end, exclude_bus=segregated)
 if len(daily) > 0:
     is_monthly_provider = pd.to_datetime(daily["date"]).dt.day.eq(1).all()
     if not is_monthly_provider:
@@ -129,23 +133,18 @@ with col_right:
 # ── Chart 4: Top services with MoM ──
 st.subheader(f"Top 20 cost lines — {selected_provider}")
 if len(top_lines) > 0:
+    # Numeric columns + column_config formatting → sort by value, not by string.
     display = top_lines.copy().drop(columns=["provider"])
-    display["current_amt"] = display["current_amt"].apply(lambda x: format_eur(x, decimals=2))
-    display["prev_amt"] = display["prev_amt"].apply(lambda x: format_eur(x, decimals=2))
-    display["delta_eur"] = display["delta_eur"].apply(lambda x: f"€{x:+,.2f}")
-    display["delta_pct"] = display["delta_pct"].apply(
-        lambda x: f"{x:+.1f}%" if pd.notna(x) else "—"
-    )
     st.dataframe(
         display, use_container_width=True, hide_index=True,
         column_config={
             "description": "Description",
             "business_unit": "BU",
             "category": "Category",
-            "current_amt": "Current",
-            "prev_amt": "Previous",
-            "delta_eur": "Δ €",
-            "delta_pct": "Δ %",
+            "current_amt": st.column_config.NumberColumn("Current", format="€%.2f"),
+            "prev_amt": st.column_config.NumberColumn("Previous", format="€%.2f"),
+            "delta_eur": st.column_config.NumberColumn("Δ €", format="€%+.2f"),
+            "delta_pct": st.column_config.NumberColumn("Δ %", format="%+.1f%%"),
         },
     )
 else:
