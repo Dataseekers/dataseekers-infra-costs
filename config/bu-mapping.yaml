@@ -32,6 +32,16 @@ ovh:
     "7cd0c51d3ecd46e0a2e9f0b862c45add": "platform"
     "a1676b228191442aa3838b8e18e207c7": "platform"
   default: "platform"
+  # Reassign individual line items WITHIN a project to another BU, matched by a
+  # case-insensitive description substring scoped to a `domain`. Needed because
+  # some BUs share the c-ovh project (a1676): rentacar's r3-* compute nodes and
+  # its "discovery"-tier MySQL DBs. Scoped by domain so the same flavor elsewhere
+  # (e.g. tickets' r3-64 in e046) is untouched.
+  # NOTE: "discovery" is a for-now heuristic — when several discovery DBs belong
+  # to different BUs, switch to a per-DB identifier (DB name).
+  description_overrides:
+    - {domain: "a1676b228191442aa3838b8e18e207c7", contains: "r3-",       bu: "rentacar"}
+    - {domain: "a1676b228191442aa3838b8e18e207c7", contains: "discovery", bu: "rentacar"}
 
 oci:
   compartments:

@@ -38,6 +38,19 @@ class OVHCollector(CostCollector):
         resp.raise_for_status()
         return resp.json()
 
+    def _resolve_bu(self, domain: str, description: str) -> str:
+        """BU for a bill line: from its `domain` (= Public Cloud project ID), then
+        any description-based override for that domain. Overrides exist because
+        some BUs share a project (e.g. rentacar's r3-* nodes and "discovery" MySQL
+        DBs live in the c-ovh project a1676). Scoped by domain so the same flavor
+        in another project (e.g. tickets' r3-64) is untouched."""
+        bu = self.get_bu(domain)
+        desc = description.lower()
+        for ov in self._bu_mapping.get("ovh", {}).get("description_overrides", []):
+            if ov.get("domain") == domain and ov.get("contains", "").lower() in desc:
+                return ov["bu"]
+        return bu
+
     def collect(self, start_date: date, end_date: date) -> list[CostRecord]:
         now = datetime.utcnow()
         records = []
@@ -61,13 +74,9 @@ class OVHCollector(CostCollector):
                 if amount <= 0:
                     continue
 
-                # Resolve the BU from the detail's `domain`, which for Public Cloud
-                # bills is the project ID (mapped in bu-mapping.yaml > ovh.projects).
-                # Non-project domains (vRack, etc.) fall back to the ovh default.
-                # Per-detail so a mixed bill is split correctly; no orderId map to
-                # maintain — new monthly orders resolve automatically.
-                bu = self.get_bu(detail.get("domain", ""))
+                domain = detail.get("domain", "")
                 description = detail.get("description", "")
+                bu = self._resolve_bu(domain, description)
                 category = self._classify(description)
 
                 records.append(CostRecord(
@@ -114,7 +123,7 @@ class OVHCollector(CostCollector):
                     "bill_date": bill_date.isoformat(),
                     "order_id": order_id,
                     "project_id": domain,
-                    "bu": self.get_bu(domain),
+                    "bu": self._resolve_bu(domain, d.get("description", "")),
                     "description": d.get("description", ""),
                     "domain": domain,
                     "period_start": d.get("periodStart"),
