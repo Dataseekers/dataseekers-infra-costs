@@ -135,3 +135,13 @@ clickhouse:
     - {from: "2026-02-18", to: "2026-03-17", rate: 0.9662}  # invoice $7,824.61
     - {from: "2026-03-18", to: "2026-04-17", rate: 0.9689}  # invoice $9,555.14
     - {from: "2026-04-18", to: null,         rate: 0.9689}  # carry forward latest known rate
+
+# ── Dashboard-only settings (do NOT affect collectors / raw_costs) ──
+# Business units listed here are excluded from the dashboard's global/aggregate
+# views (Overview + By provider) so their spend doesn't count toward org-wide
+# rollups. They remain fully available in the "By business unit" drill-down —
+# that's the one place their data is meant to show. Collectors, raw_costs and the
+# CLI report/validate are unaffected — they keep the full company picture.
+dashboard:
+  segregated_bus:
+    - tickets
