@@ -7,30 +7,6 @@ import requests
 from .base import CostCollector, CostRecord
 
 
-# Mapping of known OVH order IDs to cloud project IDs.
-# WARNING: OVH mints a NEW orderId for every monthly bill, so this map needs a
-# fresh entry per project each month. The tickets project (e046…) is the single
-# ~€1.3k–2.5k Public Cloud bill each month; the larger ~€4.7k–6.4k bill is the
-# shared c-ovh cluster (platform). Obtain new orderIds from the bill list in the
-# OVH manager (or /me/bill). TODO: resolve the project from the bill detail's
-# `domain`/`serviceName` to stop maintaining this map by hand.
-ORDER_TO_PROJECT = {
-    # ── tickets (project e046…) — one bill/month, orderId changes monthly ──
-    241718298: "e046bdd7877442a981ddd35a2d010c11",  # Jan 2026  €1367.94
-    243684787: "e046bdd7877442a981ddd35a2d010c11",  # Feb 2026  €1469.63
-    245610356: "e046bdd7877442a981ddd35a2d010c11",  # Mar 2026  €1383.14
-    247895564: "e046bdd7877442a981ddd35a2d010c11",  # Apr 2026  €1496.90
-    249647283: "e046bdd7877442a981ddd35a2d010c11",  # May 2026  €1988.90
-    251615387: "e046bdd7877442a981ddd35a2d010c11",  # Jun 2026  €2119.78
-    # ── c-ovh shared cluster (project a1676…) = platform ──
-    245611311: "a1676b228191442aa3838b8e18e207c7",
-    243683322: "a1676b228191442aa3838b8e18e207c7",
-    # ── development (project 7cd0c…) = platform ──
-    245601669: "7cd0c51d3ecd46e0a2e9f0b862c45add",
-    243700082: "7cd0c51d3ecd46e0a2e9f0b862c45add",
-}
-
-
 class OVHCollector(CostCollector):
     provider = "ovh"
 
@@ -75,11 +51,6 @@ class OVHCollector(CostCollector):
             if not (start_date <= bill_date < end_date):
                 continue
 
-            # Map bill to project via orderId
-            order_id = bill.get("orderId")
-            project_id = ORDER_TO_PROJECT.get(order_id, "unknown")
-            bu = self.get_bu(project_id)
-
             # Get bill line items
             detail_ids = self._request("GET", f"/me/bill/{bill_id}/details")
 
@@ -90,6 +61,12 @@ class OVHCollector(CostCollector):
                 if amount <= 0:
                     continue
 
+                # Resolve the BU from the detail's `domain`, which for Public Cloud
+                # bills is the project ID (mapped in bu-mapping.yaml > ovh.projects).
+                # Non-project domains (vRack, etc.) fall back to the ovh default.
+                # Per-detail so a mixed bill is split correctly; no orderId map to
+                # maintain — new monthly orders resolve automatically.
+                bu = self.get_bu(detail.get("domain", ""))
                 description = detail.get("description", "")
                 category = self._classify(description)
 
@@ -126,22 +103,20 @@ class OVHCollector(CostCollector):
                 continue
 
             order_id = bill.get("orderId")
-            mapped_project = ORDER_TO_PROJECT.get(order_id, "unknown")
-            if project_id and mapped_project != project_id:
-                continue
-
-            bu = self.get_bu(mapped_project)
 
             for detail_id in self._request("GET", f"/me/bill/{bill_id}/details"):
                 d = self._request("GET", f"/me/bill/{bill_id}/details/{detail_id}")
+                domain = d.get("domain", "")
+                if project_id and domain != project_id:
+                    continue
                 rows.append({
                     "bill_id": bill_id,
                     "bill_date": bill_date.isoformat(),
                     "order_id": order_id,
-                    "project_id": mapped_project,
-                    "bu": bu,
+                    "project_id": domain,
+                    "bu": self.get_bu(domain),
                     "description": d.get("description", ""),
-                    "domain": d.get("domain", ""),
+                    "domain": domain,
                     "period_start": d.get("periodStart"),
                     "period_end": d.get("periodEnd"),
                     "quantity": d.get("quantity"),

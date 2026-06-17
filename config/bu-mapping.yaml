@@ -25,10 +25,13 @@ gcp:
   default: "platform"
 
 ovh:
+  # Keyed by the bill detail's `domain`, which for Public Cloud is the project ID.
+  # Non-project domains (vRack, etc.) fall through to `default`.
   projects:
     "e046bdd7877442a981ddd35a2d010c11": "tickets"
     "7cd0c51d3ecd46e0a2e9f0b862c45add": "platform"
     "a1676b228191442aa3838b8e18e207c7": "platform"
+  default: "platform"
 
 oci:
   compartments:
